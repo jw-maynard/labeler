@@ -14,7 +14,10 @@ const matchConfig = [{any: ['*.txt']}];
 
 describe('checkGlobs', () => {
   it('returns true when our pattern does match changed files', () => {
-    const changedFiles = [{name: 'foo.txt', size: 6}, {name: 'bar.txt', size: 20}];
+    const changedFiles = [
+      {name: 'foo.txt', size: 6},
+      {name: 'bar.txt', size: 20}
+    ];
     const result = checkGlobs(changedFiles, matchConfig, false);
 
     expect(result).toBeTruthy();
