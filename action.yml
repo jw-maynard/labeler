@@ -18,6 +18,10 @@ inputs:
     description: 'Whether or not to auto-include paths starting with dot (e.g. `.github`)'
     default: false
     required: false
+  check-size:
+    description: 'Whether or not to to add a label based on the size of the PR'
+    default: false
+    required: false
   pr-number:
     description: 'The pull request number(s)'
     required: false

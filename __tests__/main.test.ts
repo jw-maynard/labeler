@@ -41,7 +41,10 @@ class NotFound extends Error {
 }
 
 const yamlFixtures = {
-  'only_pdfs.yml': fs.readFileSync('__tests__/fixtures/only_pdfs.yml')
+  'only_pdfs.yml': fs.readFileSync('__tests__/fixtures/only_pdfs.yml'),
+  'only_pdfs_custom_sizes.yml': fs.readFileSync(
+    '__tests__/fixtures/only_pdfs_custom_sizes.yml'
+  )
 };
 
 const configureInput = (
@@ -50,6 +53,7 @@ const configureInput = (
     'configuration-path': string;
     'sync-labels': boolean;
     dot: boolean;
+    'check-size': boolean;
     'pr-number': string[];
   }>
 ) => {
@@ -171,6 +175,82 @@ describe('run', () => {
     await run();
 
     expect(setLabelsMock).toHaveBeenCalledTimes(0);
+    expect(setOutputSpy).toHaveBeenCalledWith('new-labels', '');
+    expect(setOutputSpy).toHaveBeenCalledWith('all-labels', '');
+  });
+
+  it('(with check-size: true) it adds only size label to PRs that do not match our glob patterns based on default size settings', async () => {
+    configureInput({'check-size': true});
+    usingLabelerConfigYaml('only_pdfs.yml');
+    mockGitHubResponseChangedFiles({
+      filename: 'foo.txt',
+      additions: 36,
+      deletions: 36,
+      changes: 36
+    });
+
+    await run();
+
+    expect(setLabelsMock).toHaveBeenCalledTimes(1);
+    expect(setOutputSpy).toHaveBeenCalledWith('new-labels', 'size/L');
+    expect(setOutputSpy).toHaveBeenCalledWith('all-labels', 'size/L');
+  });
+
+  it('(with check-size: true) it adds size label and pattern label to PRs that match our glob patterns based on default size settings', async () => {
+    configureInput({'check-size': true});
+    usingLabelerConfigYaml('only_pdfs.yml');
+    mockGitHubResponseChangedFiles({
+      filename: 'foo.pdf',
+      additions: 36,
+      deletions: 36,
+      changes: 36
+    });
+
+    await run();
+
+    expect(setLabelsMock).toHaveBeenCalledTimes(1);
+    expect(setOutputSpy).toHaveBeenCalledWith(
+      'new-labels',
+      'touched-a-pdf-file,size/L'
+    );
+    expect(setOutputSpy).toHaveBeenCalledWith(
+      'all-labels',
+      'touched-a-pdf-file,size/L'
+    );
+  });
+
+  it('(with check-size: true) it adds only size label to PRs that do not match our glob patterns based on custom size settings', async () => {
+    configureInput({'check-size': true});
+    usingLabelerConfigYaml('only_pdfs_custom_sizes.yml');
+    mockGitHubResponseChangedFiles({
+      filename: 'foo.txt',
+      additions: 36,
+      deletions: 36,
+      changes: 36
+    });
+
+    await run();
+
+    expect(setLabelsMock).toHaveBeenCalledTimes(1);
+    expect(setOutputSpy).toHaveBeenCalledWith('new-labels', 'size/XS');
+    expect(setOutputSpy).toHaveBeenCalledWith('all-labels', 'size/XS');
+  });
+
+  it('(with check-size: true) it adds size/XXS label when smaller than the smallest size in config', async () => {
+    configureInput({'check-size': true});
+    usingLabelerConfigYaml('only_pdfs_custom_sizes.yml');
+    mockGitHubResponseChangedFiles({
+      filename: 'foo.txt',
+      additions: 10,
+      deletions: 10,
+      changes: 10
+    });
+
+    await run();
+
+    expect(setLabelsMock).toHaveBeenCalledTimes(1);
+    expect(setOutputSpy).toHaveBeenCalledWith('new-labels', 'size/XXS');
+    expect(setOutputSpy).toHaveBeenCalledWith('all-labels', 'size/XXS');
   });
 
   it('(with sync-labels: true) it deletes preexisting PR labels that no longer match the glob pattern', async () => {
@@ -365,6 +445,16 @@ describe('run', () => {
   });
 
   it('does not add labels to PRs that have no changed files', async () => {
+    usingLabelerConfigYaml('only_pdfs.yml');
+    mockGitHubResponseChangedFiles();
+
+    await run();
+
+    expect(setLabelsMock).toHaveBeenCalledTimes(0);
+  });
+
+  it('(with check-size: true) does not add labels to PRs that have no changed files', async () => {
+    configureInput({'check-size': true});
     usingLabelerConfigYaml('only_pdfs.yml');
     mockGitHubResponseChangedFiles();
 

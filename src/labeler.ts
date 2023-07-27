@@ -19,6 +19,14 @@ type PrFileType = {
 
 // GitHub Issues cannot have more than 100 labels
 const GITHUB_MAX_LABELS = 100;
+const DEFAULT_SIZES = new Map([
+  [0, 'XS'],
+  [10, 'S'],
+  [30, 'M'],
+  [100, 'L'],
+  [500, 'XL'],
+  [1000, 'XXL']
+]);
 
 export async function run() {
   try {
@@ -26,6 +34,7 @@ export async function run() {
     const configPath = core.getInput('configuration-path', {required: true});
     const syncLabels = !!core.getInput('sync-labels');
     const dot = core.getBooleanInput('dot');
+    const checkSize = core.getBooleanInput('check-size');
 
     const prNumbers = getPrNumbers();
     if (!prNumbers.length) {
@@ -62,8 +71,10 @@ export async function run() {
         continue;
       }
 
+      const configurationContent = await loadConfiguration(client, configPath);
+
       const labelGlobs: Map<string, StringOrMatchConfig[]> =
-        await getLabelGlobs(client, configPath);
+        await getLabelGlobs(configurationContent);
 
       const preexistingLabels = pullRequest.labels.map(l => l.name);
       const allLabels: Set<string> = new Set<string>(preexistingLabels);
@@ -75,6 +86,12 @@ export async function run() {
         } else if (syncLabels) {
           allLabels.delete(label);
         }
+      }
+
+      if (checkSize) {
+        const sizeSettings = getSizeConfig(configurationContent);
+        const sizeLabel = getSizeLabel(changedFiles, sizeSettings);
+        allLabels.add(sizeLabel);
       }
 
       const labelsToAdd = [...allLabels].slice(0, GITHUB_MAX_LABELS);
@@ -173,10 +190,10 @@ async function getChangedFiles(
   return changedFiles;
 }
 
-async function getLabelGlobs(
+async function loadConfiguration(
   client: ClientType,
   configurationPath: string
-): Promise<Map<string, StringOrMatchConfig[]>> {
+): Promise<string> {
   let configurationContent: string;
   try {
     if (!fs.existsSync(configurationPath)) {
@@ -201,6 +218,12 @@ async function getLabelGlobs(
     throw e;
   }
 
+  return configurationContent;
+}
+
+async function getLabelGlobs(
+  configurationContent: string
+): Promise<Map<string, StringOrMatchConfig[]>> {
   // loads (hopefully) a `{[label:string]: string | StringOrMatchConfig[]}`, but is `any`:
   const configObject: any = yaml.load(configurationContent);
 
@@ -226,7 +249,7 @@ function getLabelGlobMapFromObject(
   configObject: any
 ): Map<string, StringOrMatchConfig[]> {
   const labelGlobs: Map<string, StringOrMatchConfig[]> = new Map();
-  const labelConfig = configObject['labels']
+  const labelConfig = configObject['labels'];
   for (const label in labelConfig) {
     if (typeof labelConfig[label] === 'string') {
       labelGlobs.set(label, [labelConfig[label]]);
@@ -240,6 +263,26 @@ function getLabelGlobMapFromObject(
   }
 
   return labelGlobs;
+}
+
+function getSizeConfig(configurationContent: string): Map<number, string> {
+  const configObject: any = yaml.load(configurationContent);
+  if (configObject['sizes'] === undefined) {
+    return DEFAULT_SIZES;
+  }
+
+  const sizesConfig: Map<number, string> = new Map();
+  const sizesObject = JSON.parse(configObject['sizes']);
+  for (const [key, value] of Object.entries(sizesObject)) {
+    const keyNum = Number(key);
+    if (Number.isNaN(keyNum)) {
+      throw Error(
+        `found non-number as key in size config ${key} (keys of size config should always be a valid number)`
+      );
+    }
+    sizesConfig.set(keyNum, value as string);
+  }
+  return sizesConfig;
 }
 
 function toMatchConfig(config: StringOrMatchConfig): MatchConfig {
@@ -269,6 +312,35 @@ export function checkGlobs(
     }
   }
   return false;
+}
+
+export function getSizeLabel(
+  changedFiles: PrFileType[],
+  sizeSettings: Map<number, string>
+): string {
+  let newLabel: string | undefined = undefined;
+  let prSize = 0;
+  for (const file of changedFiles) {
+    prSize += file.size;
+  }
+  const sortedSizeKeys = [...sizeSettings.keys()].sort((a, b) => {
+    return a - b;
+  });
+  for (const lines of sortedSizeKeys) {
+    if (prSize >= lines) {
+      newLabel = `size/${sizeSettings.get(lines)}`;
+    }
+  }
+  if (newLabel === undefined) {
+    core.warning(
+      `The size of the PR is smaller than the smallest configured size ${sortedSizeKeys.slice(
+        -1
+      )}. Setting size to XXS.`
+    );
+    newLabel = 'size/XXS';
+  }
+
+  return newLabel;
 }
 
 function isMatch(changedFile: PrFileType, matchers: Minimatch[]): boolean {
