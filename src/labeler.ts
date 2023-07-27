@@ -13,9 +13,9 @@ interface MatchConfig {
 type StringOrMatchConfig = string | MatchConfig;
 type ClientType = ReturnType<typeof github.getOctokit>;
 type PrFileType = {
-  name: string
-  size: number
-}
+  name: string;
+  size: number;
+};
 
 // GitHub Issues cannot have more than 100 labels
 const GITHUB_MAX_LABELS = 100;
@@ -51,7 +51,10 @@ export async function run() {
       }
 
       core.debug(`fetching changed files for pr #${prNumber}`);
-      const changedFiles: PrFileType[] = await getChangedFiles(client, prNumber);
+      const changedFiles: PrFileType[] = await getChangedFiles(
+        client,
+        prNumber
+      );
       if (!changedFiles.length) {
         core.warning(
           `Pull request #${prNumber} has no changed files, skipping`
@@ -156,7 +159,10 @@ async function getChangedFiles(
 
   const listFilesResponse = await client.paginate(listFilesOptions);
   const changedFiles = listFilesResponse.map((f: any) => {
-    return {name: f.filename as string, size: (f.additions + f.deletions + f.changes) as number}
+    return {
+      name: f.filename as string,
+      size: (f.additions + f.deletions + f.changes) as number
+    };
   });
 
   core.debug('found changed files:');
