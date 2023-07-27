@@ -7,6 +7,13 @@ import fs from 'fs';
 jest.mock('@actions/core');
 jest.mock('@actions/github');
 
+type mockGitHubResponseChangedFilesType = {
+  filename: string;
+  additions: number;
+  deletions: number;
+  changes: number;
+};
+
 const gh = github.getOctokit('_');
 const setLabelsMock = jest.spyOn(gh.rest.issues, 'setLabels');
 const reposMock = jest.spyOn(gh.rest.repos, 'getContent');
@@ -63,7 +70,12 @@ describe('run', () => {
   it('(with dot: false) adds labels to PRs that match our glob patterns', async () => {
     configureInput({});
     usingLabelerConfigYaml('only_pdfs.yml');
-    mockGitHubResponseChangedFiles('foo.pdf');
+    mockGitHubResponseChangedFiles({
+      filename: 'foo.pdf',
+      additions: 10,
+      deletions: 10,
+      changes: 10
+    });
     getPullMock.mockResolvedValue(<any>{
       data: {
         labels: []
@@ -93,7 +105,12 @@ describe('run', () => {
   it('(with dot: true) adds labels to PRs that match our glob patterns', async () => {
     configureInput({dot: true});
     usingLabelerConfigYaml('only_pdfs.yml');
-    mockGitHubResponseChangedFiles('.foo.pdf');
+    mockGitHubResponseChangedFiles({
+      filename: 'foo.pdf',
+      additions: 10,
+      deletions: 10,
+      changes: 10
+    });
     getPullMock.mockResolvedValue(<any>{
       data: {
         labels: []
@@ -122,7 +139,12 @@ describe('run', () => {
   it('(with dot: false) does not add labels to PRs that do not match our glob patterns', async () => {
     configureInput({});
     usingLabelerConfigYaml('only_pdfs.yml');
-    mockGitHubResponseChangedFiles('.foo.pdf');
+    mockGitHubResponseChangedFiles({
+      filename: 'foo.pdf',
+      additions: 10,
+      deletions: 10,
+      changes: 10
+    });
     getPullMock.mockResolvedValue(<any>{
       data: {
         labels: []
@@ -139,7 +161,12 @@ describe('run', () => {
   it('(with dot: true) does not add labels to PRs that do not match our glob patterns', async () => {
     configureInput({dot: true});
     usingLabelerConfigYaml('only_pdfs.yml');
-    mockGitHubResponseChangedFiles('foo.txt');
+    mockGitHubResponseChangedFiles({
+      filename: 'foo.pdf',
+      additions: 10,
+      deletions: 10,
+      changes: 10
+    });
 
     await run();
 
@@ -154,7 +181,12 @@ describe('run', () => {
     });
 
     usingLabelerConfigYaml('only_pdfs.yml');
-    mockGitHubResponseChangedFiles('foo.txt');
+    mockGitHubResponseChangedFiles({
+      filename: 'foo.pdf',
+      additions: 10,
+      deletions: 10,
+      changes: 10
+    });
     getPullMock.mockResolvedValue(<any>{
       data: {
         labels: [{name: 'touched-a-pdf-file'}, {name: 'manually-added'}]
@@ -182,7 +214,12 @@ describe('run', () => {
     });
 
     usingLabelerConfigYaml('only_pdfs.yml');
-    mockGitHubResponseChangedFiles('foo.txt');
+    mockGitHubResponseChangedFiles({
+      filename: 'foo.pdf',
+      additions: 10,
+      deletions: 10,
+      changes: 10
+    });
     getPullMock.mockResolvedValue(<any>{
       data: {
         labels: [{name: 'touched-a-pdf-file'}, {name: 'manually-added'}]
@@ -207,7 +244,12 @@ describe('run', () => {
     });
 
     usingLabelerConfigYaml('only_pdfs.yml');
-    mockGitHubResponseChangedFiles('foo.pdf');
+    mockGitHubResponseChangedFiles({
+      filename: 'foo.pdf',
+      additions: 10,
+      deletions: 10,
+      changes: 10
+    });
 
     const existingLabels = Array.from({length: 100}).map((_, idx) => ({
       name: `existing-label-${idx}`
@@ -240,7 +282,12 @@ describe('run', () => {
     });
 
     usingLabelerConfigYaml('only_pdfs.yml');
-    mockGitHubResponseChangedFiles('foo.pdf');
+    mockGitHubResponseChangedFiles({
+      filename: 'foo.pdf',
+      additions: 10,
+      deletions: 10,
+      changes: 10
+    });
 
     getPullMock.mockResolvedValue(<any>{
       data: {
@@ -274,7 +321,12 @@ describe('run', () => {
     });
 
     usingLabelerConfigYaml('only_pdfs.yml');
-    mockGitHubResponseChangedFiles('foo.pdf');
+    mockGitHubResponseChangedFiles({
+      filename: 'foo.pdf',
+      additions: 10,
+      deletions: 10,
+      changes: 10
+    });
 
     getPullMock.mockResolvedValueOnce(<any>{
       data: {
@@ -324,7 +376,12 @@ describe('run', () => {
   it('should use local configuration file if it exists', async () => {
     const configFile = 'only_pdfs.yml';
     const configFilePath = path.join(__dirname, 'fixtures', configFile);
-    mockGitHubResponseChangedFiles('foo.pdf');
+    mockGitHubResponseChangedFiles({
+      filename: 'foo.pdf',
+      additions: 10,
+      deletions: 10,
+      changes: 10
+    });
     const readFileSyncOptions = {encoding: 'utf8'};
 
     configureInput({
@@ -342,7 +399,12 @@ describe('run', () => {
 
   it('should fetch configuration file from API if it does not exist locally', async () => {
     const configFilePath = 'non_existed_path/labeler.yml';
-    mockGitHubResponseChangedFiles('foo.pdf');
+    mockGitHubResponseChangedFiles({
+      filename: 'foo.pdf',
+      additions: 10,
+      deletions: 10,
+      changes: 10
+    });
     configureInput({
       'configuration-path': configFilePath
     });
@@ -363,7 +425,12 @@ describe('run', () => {
         throw error;
       });
       const warningMessage = `The config file was not found at ${configFilePath}. Make sure it exists and that this action has the correct access rights.`;
-      mockGitHubResponseChangedFiles('foo.pdf');
+      mockGitHubResponseChangedFiles({
+        filename: 'foo.pdf',
+        additions: 10,
+        deletions: 10,
+        changes: 10
+      });
       configureInput({
         'configuration-path': configFilePath
       });
@@ -383,7 +450,14 @@ function usingLabelerConfigYaml(fixtureName: keyof typeof yamlFixtures): void {
   });
 }
 
-function mockGitHubResponseChangedFiles(...files: string[]): void {
-  const returnValue = files.map(f => ({filename: f}));
+function mockGitHubResponseChangedFiles(
+  ...files: mockGitHubResponseChangedFilesType[]
+): void {
+  const returnValue = files.map(f => ({
+    filename: f.filename,
+    additions: f.additions,
+    deletions: f.deletions,
+    changes: f.changes
+  }));
   paginateMock.mockReturnValue(<any>returnValue);
 }
