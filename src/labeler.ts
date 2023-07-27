@@ -226,11 +226,12 @@ function getLabelGlobMapFromObject(
   configObject: any
 ): Map<string, StringOrMatchConfig[]> {
   const labelGlobs: Map<string, StringOrMatchConfig[]> = new Map();
-  for (const label in configObject.labels) {
-    if (typeof configObject[label] === 'string') {
-      labelGlobs.set(label, [configObject[label]]);
-    } else if (configObject[label] instanceof Array) {
-      labelGlobs.set(label, configObject[label]);
+  const labelConfig = configObject['labels']
+  for (const label in labelConfig) {
+    if (typeof labelConfig[label] === 'string') {
+      labelGlobs.set(label, [labelConfig[label]]);
+    } else if (labelConfig[label] instanceof Array) {
+      labelGlobs.set(label, labelConfig[label]);
     } else {
       throw Error(
         `found unexpected type for label ${label} (should be string or array of globs)`

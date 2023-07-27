@@ -106,7 +106,7 @@ describe('run', () => {
     configureInput({dot: true});
     usingLabelerConfigYaml('only_pdfs.yml');
     mockGitHubResponseChangedFiles({
-      filename: 'foo.pdf',
+      filename: '.foo.pdf',
       additions: 10,
       deletions: 10,
       changes: 10
@@ -140,7 +140,7 @@ describe('run', () => {
     configureInput({});
     usingLabelerConfigYaml('only_pdfs.yml');
     mockGitHubResponseChangedFiles({
-      filename: 'foo.pdf',
+      filename: '.foo.pdf',
       additions: 10,
       deletions: 10,
       changes: 10
@@ -162,7 +162,7 @@ describe('run', () => {
     configureInput({dot: true});
     usingLabelerConfigYaml('only_pdfs.yml');
     mockGitHubResponseChangedFiles({
-      filename: 'foo.pdf',
+      filename: 'foo.txt',
       additions: 10,
       deletions: 10,
       changes: 10
@@ -182,7 +182,7 @@ describe('run', () => {
 
     usingLabelerConfigYaml('only_pdfs.yml');
     mockGitHubResponseChangedFiles({
-      filename: 'foo.pdf',
+      filename: 'foo.txt',
       additions: 10,
       deletions: 10,
       changes: 10
@@ -215,7 +215,7 @@ describe('run', () => {
 
     usingLabelerConfigYaml('only_pdfs.yml');
     mockGitHubResponseChangedFiles({
-      filename: 'foo.pdf',
+      filename: 'foo.txt',
       additions: 10,
       deletions: 10,
       changes: 10
