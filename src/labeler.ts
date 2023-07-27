@@ -226,7 +226,7 @@ function getLabelGlobMapFromObject(
   configObject: any
 ): Map<string, StringOrMatchConfig[]> {
   const labelGlobs: Map<string, StringOrMatchConfig[]> = new Map();
-  for (const label in configObject) {
+  for (const label in configObject.labels) {
     if (typeof configObject[label] === 'string') {
       labelGlobs.set(label, [configObject[label]]);
     } else if (configObject[label] instanceof Array) {
