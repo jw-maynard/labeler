@@ -12,6 +12,10 @@ interface MatchConfig {
 
 type StringOrMatchConfig = string | MatchConfig;
 type ClientType = ReturnType<typeof github.getOctokit>;
+type PrFileType = {
+  name: string
+  size: number
+}
 
 // GitHub Issues cannot have more than 100 labels
 const GITHUB_MAX_LABELS = 100;
@@ -47,7 +51,7 @@ export async function run() {
       }
 
       core.debug(`fetching changed files for pr #${prNumber}`);
-      const changedFiles: string[] = await getChangedFiles(client, prNumber);
+      const changedFiles: PrFileType[] = await getChangedFiles(client, prNumber);
       if (!changedFiles.length) {
         core.warning(
           `Pull request #${prNumber} has no changed files, skipping`
@@ -143,7 +147,7 @@ function getPrNumbers(): number[] {
 async function getChangedFiles(
   client: ClientType,
   prNumber: number
-): Promise<string[]> {
+): Promise<PrFileType[]> {
   const listFilesOptions = client.rest.pulls.listFiles.endpoint.merge({
     owner: github.context.repo.owner,
     repo: github.context.repo.repo,
@@ -151,7 +155,9 @@ async function getChangedFiles(
   });
 
   const listFilesResponse = await client.paginate(listFilesOptions);
-  const changedFiles = listFilesResponse.map((f: any) => f.filename);
+  const changedFiles = listFilesResponse.map((f: any) => {
+    return {name: f.filename as string, size: (f.additions + f.deletions + f.changes) as number}
+  });
 
   core.debug('found changed files:');
   for (const file of changedFiles) {
@@ -244,7 +250,7 @@ function printPattern(matcher: Minimatch): string {
 }
 
 export function checkGlobs(
-  changedFiles: string[],
+  changedFiles: PrFileType[],
   globs: StringOrMatchConfig[],
   dot: boolean
 ): boolean {
@@ -258,11 +264,11 @@ export function checkGlobs(
   return false;
 }
 
-function isMatch(changedFile: string, matchers: Minimatch[]): boolean {
-  core.debug(`    matching patterns against file ${changedFile}`);
+function isMatch(changedFile: PrFileType, matchers: Minimatch[]): boolean {
+  core.debug(`    matching patterns against file ${changedFile.name}`);
   for (const matcher of matchers) {
     core.debug(`   - ${printPattern(matcher)}`);
-    if (!matcher.match(changedFile)) {
+    if (!matcher.match(changedFile.name)) {
       core.debug(`   ${printPattern(matcher)} did not match`);
       return false;
     }
@@ -274,7 +280,7 @@ function isMatch(changedFile: string, matchers: Minimatch[]): boolean {
 
 // equivalent to "Array.some()" but expanded for debugging and clarity
 function checkAny(
-  changedFiles: string[],
+  changedFiles: PrFileType[],
   globs: string[],
   dot: boolean
 ): boolean {
@@ -293,7 +299,7 @@ function checkAny(
 
 // equivalent to "Array.every()" but expanded for debugging and clarity
 function checkAll(
-  changedFiles: string[],
+  changedFiles: PrFileType[],
   globs: string[],
   dot: boolean
 ): boolean {
@@ -311,7 +317,7 @@ function checkAll(
 }
 
 function checkMatch(
-  changedFiles: string[],
+  changedFiles: PrFileType[],
   matchConfig: MatchConfig,
   dot: boolean
 ): boolean {
